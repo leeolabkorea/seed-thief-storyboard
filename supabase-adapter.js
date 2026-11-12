@@ -61,7 +61,14 @@
     const { error } = await client.auth.signInWithOtp({
       email, options: { emailRedirectTo: location.href.split('#')[0].split('?')[0] }
     });
-    msg(error ? '로그인 링크 전송 실패: ' + error.message : '이메일을 확인해 로그인 링크를 눌러주세요.\n첫 로그인 후에는 감독이 팀원 권한을 등록해야 합니다.');
+    if (error) {
+      const limited = error.status === 429 || /rate limit|too many/i.test(error.message || '');
+      msg(limited
+        ? '이메일 발송 제한에 도달했습니다. 현재 추가 이메일을 발송할 수 없습니다.\\n이미 로그인한 탭이 있으면 해당 탭을 사용하세요.\\n제한이 해제된 후 다시 시도하거나 관리자에게 SMTP 설정을 요청하세요.'
+        : '로그인 링크 전송 실패: ' + error.message);
+    } else {
+      msg('이메일을 확인해 로그인 링크를 눌러주세요.\\n첫 로그인 후에는 감독이 팀원 권한을 등록해야 합니다.');
+    }
   });
 
   // Display current authentication state rather than always showing the email form.
