@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>씨앗도둑 | 스토리보드 리뷰</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* storyboard review kit — lightbox: filmstrip rail | panel stage | edit sheet. dark so charcoal reads true */
+  --bg: #19191b;
+  --surface: #222225;
+  --line: #333337;
+  --ink: #ebe8e1;
+  --muted: #9b978e;
+  --accent: #d6a75a;
+  --narr: #d77a72;
+  --st-todo: #6f6c66; --st-ok: #6fae80; --st-draft: #d9a441; --st-requested: #d5625a; --st-working: #a98be0; --st-done: #6d9fd6;
+  --font-body: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.55; }
+button, input, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.app { height: 100%; display: grid; grid-template-rows: auto 1fr; }
+header { display: flex; align-items: center; gap: 12px 16px; padding: 10px 18px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+header h1 { font-size: 17px; font-weight: 900; margin: 0; letter-spacing: -0.01em; }
+.counts { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.chip b { color: var(--ink); font-weight: 700; }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }
+.spacer { flex: 1; }
+.btn { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 14px; }
+.btn:hover { border-color: var(--muted); }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #1a1408; font-weight: 700; }
+.save { font-size: 13px; color: var(--muted); }
+.save.err { color: var(--st-requested); }
+.agent { font-size: 13px; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
+.agent .dot { background: var(--st-todo); }
+.agent.on .dot { background: var(--st-ok); }
+.agent.stale .dot { background: var(--st-draft); }
+.agent.busy .dot { background: var(--st-working); animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .3; } }
+
+.main { display: grid; grid-template-columns: 210px 1fr 420px; min-height: 0; }
+.main.wide { grid-template-columns: 0 1fr 0; }
+.main.wide .rail, .main.wide .sheet { display: none; }
+.main.wide .frame img { max-height: 78vh; }
+
+.rail { overflow-y: auto; border-right: 1px solid var(--line); padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+.rail h2 { font-size: 12px; color: var(--muted); font-weight: 500; margin: 10px 2px 2px; }
+.thumb { flex: none; display: grid; grid-template-columns: 4px 1fr; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--surface); cursor: pointer; padding: 0; text-align: left; }
+.thumb.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.thumb .stripe { background: var(--st-todo); }
+.thumb .body { display: grid; gap: 4px; padding: 6px; }
+.thumb img { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; border-radius: 3px; }
+.thumb .meta { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+.thumb .meta b { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+.stage { display: flex; flex-direction: column; min-height: 0; padding: 16px 20px; gap: 12px; overflow-y: auto; }
+.stagebar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.cutid { font-weight: 900; font-size: 30px; line-height: 1; font-variant-numeric: tabular-nums; }
+.scene { color: var(--muted); font-size: 14px; }
+.frame { flex: none; display: block; position: relative; }
+.frame img { display: block; margin: 0 auto; max-width: 100%; max-height: 62vh; width: auto; height: auto; aspect-ratio: 16 / 9; object-fit: contain; border-radius: 4px; box-shadow: 0 8px 30px rgba(0,0,0,.45); background: #f3f0ea; }
+.frame .badge { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); background: rgba(25,25,27,.85); border: 1px solid var(--line); border-radius: 999px; padding: 3px 12px; font-size: 13px; display: none; }
+.frame.old .badge { display: block; }
+.preview { border-top: 1px solid var(--line); padding-top: 10px; display: grid; gap: 4px; max-width: 980px; }
+.preview .cam { color: var(--muted); font-size: 14px; }
+.preview .ln { display: grid; grid-template-columns: 110px 1fr; gap: 10px; font-size: 16px; }
+.preview .ln .spk { font-weight: 700; }
+.preview .ln .par { color: var(--muted); font-size: 14px; }
+.preview .ln.n { color: var(--narr); }
+.preview .act { color: var(--muted); font-size: 15px; }
+
+.sheet { overflow-y: auto; border-left: 1px solid var(--line); padding: 16px 18px 40px; display: flex; flex-direction: column; gap: 16px; }
+.statusrow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.stbadge { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 14px; }
+.stbadge.working .dot { animation: pulse 1.2s ease-in-out infinite; }
+.seg { display: inline-flex; gap: 6px; margin-left: auto; }
+.seg button { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 6px 10px; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+.seg button[aria-pressed="true"] { border-color: currentColor; font-weight: 700; }
+.sendbox { display: grid; gap: 8px; border: 1px solid var(--line); border-radius: 10px; padding: 12px; background: #1d1d20; }
+.sendbox .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.sendbox .btn.primary { flex: 1; padding: 9px 12px; }
+.reply { font-size: 13px; border-radius: 8px; padding: 8px 10px; border: 1px solid var(--line); white-space: pre-wrap; }
+.reply.working { border-color: var(--st-working); color: var(--st-working); }
+.reply.done { border-color: var(--st-done); color: var(--st-done); }
+.reply.requested { border-color: var(--st-requested); color: var(--st-requested); }
+.field { display: grid; gap: 6px; }
+.field label { font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.field input, .field textarea { width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+.field textarea { resize: vertical; line-height: 1.7; }
+.field.changed input, .field.changed textarea { border-color: var(--st-draft); }
+.orig { font-size: 12px; color: var(--muted); display: none; gap: 8px; align-items: baseline; }
+.field.changed .orig { display: flex; }
+.orig span { white-space: pre-wrap; }
+.linkbtn { background: none; border: 0; color: var(--accent); cursor: pointer; padding: 0; font-size: 12px; white-space: nowrap; }
+.hint { font-size: 12px; color: var(--muted); }
+.memo textarea { border-color: #4a4538; }
+
+.grid { display: none; overflow-y: auto; padding: 18px; }
+.app.gridmode .main { display: none; }
+.app.gridmode .grid { display: block; }
+.grid section { margin-bottom: 26px; }
+.grid h2 { font-size: 15px; margin: 0 0 10px; color: var(--muted); font-weight: 500; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; cursor: pointer; display: grid; grid-template-rows: auto auto; text-align: left; padding: 0; }
+.card img { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; }
+.card .cbody { padding: 10px 12px; display: grid; gap: 4px; border-top: 4px solid var(--st-todo); }
+.card .top { display: flex; justify-content: space-between; align-items: center; }
+.card .top b { font-size: 18px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.card .txt { font-size: 13px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.card .memo-p { font-size: 13px; color: var(--st-draft); }
+
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none; align-items: center; justify-content: center; padding: 20px; }
+.modal.open { display: flex; }
+.modal .box { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; width: min(720px, 100%); display: grid; gap: 10px; }
+.modal textarea { width: 100%; height: 340px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px; font-size: 13px; }
+.toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 8px 16px; font-size: 14px; display: none; }
+.toast.show { display: block; }
+
+@media (max-width: 1100px) {
+  .main, .main.wide { display: block; overflow-y: auto; }
+  .stage, .sheet { min-height: auto; }
+  .rail { flex-direction: row; overflow-x: auto; overflow-y: hidden; border-right: 0; border-bottom: 1px solid var(--line); }
+  .rail h2 { display: none; }
+  .thumb { width: 132px; }
+  .frame img { max-height: 50vh; }
+  .stage { overflow: visible; }
+  .sheet { border-left: 0; border-top: 1px solid var(--line); overflow: visible; }
+}
+@media (max-width: 420px) { .preview .ln { grid-template-columns: 1fr; gap: 0; } }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header>
+    <h1 id="title"></h1>
+    <span id="chips"></span>
+    <div class="counts" id="counts"></div>
+    <div class="spacer"></div>
+    <span class="agent" id="agent" title="AI 수정 요청 동기화 상태"><span class="dot"></span><span id="agentTxt">공유 DB 연결 확인 중…</span></span>
+    <span class="save" id="save">저장소 연결 중…</span>
+    <button class="btn" id="btnGrid" type="button">전체 보기</button>
+    <button class="btn" id="btnWide" type="button">그림 크게</button>
+    <button class="btn" id="btnCopy" type="button">수정 목록 복사</button>
+  </header>
+  <div class="main" id="main">
+    <nav class="rail" id="rail" aria-label="컷 목록"></nav>
+    <div class="stage">
+      <div class="stagebar">
+        <button class="btn" id="prev" type="button" aria-label="이전 컷">◀</button>
+        <span class="cutid" id="cutid"></span>
+        <button class="btn" id="next" type="button" aria-label="다음 컷">▶</button>
+        <span class="scene" id="scene"></span>
+        <div class="spacer"></div>
+        <button class="btn" id="btnOld" type="button" hidden>이전 그림 누르고 보기</button>
+        <span class="hint">← → 키로 컷 이동</span>
+      </div>
+      <div class="frame" id="frame"><img id="img" alt=""><span class="badge">이전 그림</span></div>
+      <div class="preview" id="preview"></div>
+    </div>
+    <aside class="sheet" id="sheet">
+      <div class="statusrow">
+        <span class="stbadge" id="stbadge"><span class="dot"></span><span></span></span>
+        <div class="seg" id="seg">
+          <button type="button" data-k="todo"><span class="dot" style="background:var(--st-todo)"></span>미검토</button>
+          <button type="button" data-k="ok"><span class="dot" style="background:var(--st-ok)"></span>통과</button>
+        </div>
+      </div>
+      <div class="sendbox">
+        <div class="field memo" id="f-memo">
+          <label for="in-memo">수정 요청 <span class="hint">그림·연출을 어떻게 바꿀지</span></label>
+          <textarea id="in-memo" rows="3" placeholder="예: 클로에 표정이 너무 무섭다, 살짝 미소 남기기 / 라이언을 화면 왼쪽으로"></textarea>
+        </div>
+        <div class="row">
+          <button class="btn primary" id="btnSend" type="button">수정 요청 보내기 → 다음 컷</button>
+          <button class="btn" id="btnCancel" type="button" hidden>요청 취소</button>
+        </div>
+        <div class="hint" id="sendHint">대사·카메라 칸을 고친 것도 함께 보내져요. 보내 두고 다음 컷을 보시면 됩니다.</div>
+        <div class="reply" id="reply" hidden></div>
+      </div>
+      <div class="field" id="f-lines">
+        <label for="in-lines">대사·지문 <button class="linkbtn" type="button" data-reset="lines">원래대로</button></label>
+        <textarea id="in-lines" rows="5"></textarea>
+        <div class="hint">한 줄에 하나 · <b>화자: (지문) 대사</b> · <b>화자 N:</b> 나레이션 · <b>화자 O.S.:</b> 화면 밖 · <b>▷</b> 지문 · <b>SFX</b> 효과음</div>
+        <div class="orig">원래 <span data-orig="lines"></span></div>
+      </div>
+      <div class="field" id="f-cam">
+        <label for="in-cam"><span data-label="cam">카메라</span> <button class="linkbtn" type="button" data-reset="cam">원래대로</button></label>
+        <textarea id="in-cam" rows="2"></textarea>
+        <div class="orig">원래 <span data-orig="cam"></span></div>
+      </div>
+      <div class="field" id="f-note">
+        <label for="in-note"><span data-label="note">연출 메모</span> <button class="linkbtn" type="button" data-reset="note">원래대로</button></label>
+        <textarea id="in-note" rows="2"></textarea>
+        <div class="orig">원래 <span data-orig="note"></span></div>
+      </div>
+      <div class="field" id="f-tag">
+        <label for="in-tag"><span data-label="tag">시점 태그</span> <button class="linkbtn" type="button" data-reset="tag">원래대로</button></label>
+        <textarea id="in-tag" rows="2"></textarea>
+        <div class="orig">원래 <span data-orig="tag"></span></div>
+      </div>
+    </aside>
+  </div>
+  <div class="grid" id="grid"></div>
+</div>
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="mtitle">
+  <div class="box">
+    <b id="mtitle">수정 목록</b>
+    <span class="hint" id="mhint">채팅에 붙여 넣어도 반영돼요.</span>
+    <textarea id="mtext" readonly></textarea>
+    <div style="display:flex; gap:8px; justify-content:flex-end">
+      <button class="btn" id="mcopy" type="button">다시 복사</button>
+      <button class="btn primary" id="mclose" type="button">닫기</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+const DATA = {"key": "ssiat-ep0203", "title": "씨앗도둑 2~3화 보드 리뷰", "chips": [["카메라", "ARRI Alexa Mini LF"], ["렌즈", "Blackwing7 구면"]], "fieldLabels": {"cam": "카메라", "note": "연출 메모", "tag": "주인 · 모름 · 표시"}, "scenes": {"2-1": "2화 #1  에이바·라이언의 집 — 거실 → 현관 (낮, 1화 #3 직후)", "2-2": "2화 #2  육아용품점 — 매장 안 (같은 날 오후)", "2-3": "2화 #3  미국 대학 — 회상 (하이틴 로맨스 룩)", "3-1": "3화 #1  육아용품점 계산대 → 거리 → 루카스의 차 안 (낮)", "3-2": "3화 #2  호텔 스위트 — 찰스의 펜트하우스 (노을)"}, "cuts": [{"id": "2-1-1", "sc": "2-1", "cam": "와이드 · 정면 · 약간 높게 · 고정", "note": "1화 3-1과 같은 셋업에서 사람만 빠진 거실. 소파 양끝에 떨어져 앉은 부부, 가운데 빈 자리가 둘의 거리. 라이언은 폰만 본다", "tag": "주인 감시 · 모름 에이바 · 1화 3-1 수미상관", "lines": "라이언: (귀찮다는 듯. 핸드폰 메시지를 보내고 있다) 엄마 그러는 거 하루이틀이야? 왜 이렇게 흥분해?", "v": 1}, {"id": "2-1-2", "sc": "2-1", "cam": "오버더숄더 · 라이언 오른쪽 옆얼굴(헤드숏) 전경 · 아이레벨 · 고정", "note": "전경 라이언은 몸 정면 방향을 보며 폰만 들여다봄 / 너머로 라이언 쪽으로 몸을 반쯤 돌리고 그를 보며 말하는 에이바, 배에 손. 리뷰 요청 반영", "tag": "주인 관객 · 모름 에이바", "lines": "에이바: (미세하게 인상을 쓰며, 살짝 낮은 목소리로 단호하게. 배에 손을 얹으며) 우리 딸이 그런 소리를 듣는데, 어떻게 가만있어?", "v": 2}, {"id": "2-1-3", "sc": "2-1", "cam": "미디엄 클로즈업 · 약간 하이 · 고정", "note": "눈은 끝까지 폰에. 라이언은 항상 약간 내려다본다(R5)", "tag": "주인 관객 · 모름 라이언", "lines": "라이언: (거들먹거리며, 진지하게) 재벌 2세랑 결혼하면서 이 정도도 예상 못했어?", "v": 1}, {"id": "2-1-4", "sc": "2-1", "cam": "헤드숏 · 2-1-2와 같은 축 · 망원 · 고정", "note": "이 회차에서 에이바가 가장 센 얼굴. 라이언은 화면에 없음(리뷰 요청). 시선은 화면 왼쪽 밖 라이언", "tag": "주인 관객 특권 · 모름 라이언 · 비밀: 라이언은 회사를 못 물려받는다", "lines": "에이바: (차분하지만 단호하게) 재벌2세 같은 소리 하네!\n에이바: (약간의 짜증과 경멸. 하찮다는 듯) 아버님은 당신한테 회사 물려 줄 생각도 없으셔!", "v": 3}, {"id": "2-1-5", "sc": "2-1", "cam": "클로즈업 · 약간 하이 · 고정", "note": "폰을 무릎 쪽으로 내리며 처음으로 에이바를 본다", "tag": "주인 관객 · 모름 라이언", "lines": "라이언: (움찔하며 정색) 누가 그래?", "v": 1}, {"id": "2-1-6", "sc": "2-1", "cam": "웨이스트샷 · 2-1-4와 같은 각도 · 고정", "note": "대사 끝에 초인종. 리뷰 요청 반영", "tag": "주인 관객 · 모름 —", "lines": "에이바: (약간의 황당, 약간의 비웃음) 내가 그 회사를 다니는데 그걸 몰라?\nSFX 띵동 — 초인종", "v": 3}, {"id": "2-1-7a", "sc": "2-1", "cam": "미디엄 · 현관 쪽에서 소파를 봄 · 고정", "note": "띵동 하면 에이바가 카메라(현관) 쪽으로 돌아본다. 옆의 라이언은 그대로 폰. 리뷰 요청 반영", "tag": "주인 관객 · 모름 에이바", "lines": "▷ 초인종 소리에 현관 쪽으로 고개를 돌리는 에이바", "v": 3}, {"id": "2-1-7b", "sc": "2-1", "cam": "미디엄 · 정면 앙각 · 고정", "note": "소파에서 폰만 하는 라이언을 정면 아래에서 올려다본다 — 모르는 척. 폰 상대는 클로에(3-1-7에서 회수). R5(라이언은 약간 하이)의 예외: 리뷰 요청", "tag": "주인 관객 특권 · 모름 에이바 · 증거 인서트(폰)", "lines": "▷ 라이언은 모르는 척 핸드폰만 하고 있다", "v": 1}, {"id": "2-1-7c", "sc": "2-1", "cam": "미디엄 · 아이레벨 · 고정", "note": "다시 에이바. 살짝 한숨 쉬고 소파를 짚고 힘겹게 몸을 일으켜 현관 쪽으로(만삭이슈)", "tag": "주인 관객 · 모름 에이바", "lines": "▷ 에이바, 살짝 한숨을 쉬고 쇼파를 짚고 몸을 일으켜 현관으로 간다", "v": 1}, {"id": "2-1-8a", "sc": "2-1", "cam": "오버더숄더 · 루카스 등 뒤(문 밖) · 고정", "note": "닫힌 문 앞에 선 루카스의 등 너머로 문이 열리고, 에이바가 살짝 놀라 멈칫한다. '누구세요?'는 리뷰 요청으로 추가된 대사", "tag": "주인 관객 · 모름 에이바 · 리뷰 추가 컷", "lines": "▷ 닫힌 문 앞, 커다란 선물상자를 든 루카스\n에이바 O.S.: (문 안쪽에서) 누구세요?\n▷ 문을 연 에이바, 살짝 놀라며 멈칫한다", "v": 1}, {"id": "2-1-8b", "sc": "2-1", "cam": "오버더숄더 · 에이바 뒤통수에서 출발 · 85mm · 옆으로 트랙", "note": "에이바 뒤통수에서 출발해 옆으로 트랙하면 루카스의 얼굴이 드러난다. 문밖 역광으로 뽀샤시하게 — 루카스가 멋있고 잘생기게 나와야 하는 컷", "tag": "주인 관객 · 모름 에이바 · R-B 문틀 · 역광", "lines": "에이바: (눈을 약간 크게 뜨며, 궁금한 듯한 표정) 루카스 전무님..?", "v": 1}, {"id": "2-1-9a", "sc": "2-1", "cam": "빅 클로즈업 헤드숏 · 완전 정측면 · 고정", "note": "루카스 얼굴 완전 정측면. 왼쪽 1/3 비움 → 루카스 소개 자막", "tag": "주인 관객 · 모름 — · 소개 자막", "lines": "루카스: (무표정하고 건조하게) 회장님께서 보내셨습니다.", "v": 1}, {"id": "2-1-9b", "sc": "2-1", "cam": "손 인서트 · 클로즈업 · 고정", "note": "선물을 내미는 루카스의 두 손", "tag": "주인 관객 · 모름 —", "lines": "▷ 선물상자를 내미는 루카스의 손", "v": 1}, {"id": "2-1-10", "sc": "2-1", "cam": "오버더숄더 · 루카스 쪽(문 밖) · 고정", "note": "루카스 어깨 너머로 상자를 받아 드는 에이바. 받는 순간 무게에 살짝 기운다", "tag": "주인 관객 · 모름 에이바", "lines": "에이바: (선물을 받아 들며 상냥하게 웃는다) 어머, 뭘 이런 걸 다..", "v": 2}, {"id": "2-1-11", "sc": "2-1", "cam": "오버더숄더 · 에이바 등 뒤 · 문밖 역광 · 느린 푸시인", "note": "무표정하지만 그윽하게 에이바를 보는 루카스 — 문밖 역광에 환상처럼. 에이바를 향한 마음의 씨앗", "tag": "주인 루카스 · 모름 에이바 · 시선 씨앗 · 역광", "lines": "▷ 무표정하지만 그윽하게 에이바를 쳐다보는 루카스", "v": 2}, {"id": "2-1-12", "sc": "2-1", "cam": "손 인서트 ④ · 옆에서 가슴 높이 · 익스트림 클로즈업(팔·손만) · 85mm · 고정", "note": "마주 선 두 사람이 선물상자를 함께 든 채, 휘청이는 순간 루카스의 손이 에이바의 손 위로 겹친다 — 보호의 손. 팔과 손만. 편집 약간 길게", "tag": "주인 관객 특권 · 모름 에이바 · 손 인서트 ④", "lines": "▷ 선물이 무거운지 살짝 휘청거리는 에이바, 에이바의 팔을 잡아 주는 루카스", "v": 3}, {"id": "2-1-13", "sc": "2-1", "cam": "오버더숄더 · 라이언 등 뒤(복도) · 딥포커스 · 고정", "note": "복도에 선 라이언의 뒷모습 너머로, 현관에서 함께 상자를 든 에이바와 루카스. 1화에서 클로에가 서던 '후경의 관찰자' 자리. 리뷰 요청 반영", "tag": "주인 라이언 시점 · 모름 에이바·루카스 · R-D 관찰자", "lines": "▷ 그걸 한 걸음 뒤에서 지켜보고 있는 라이언. 라이언이 에이바 앞에 나선다", "v": 2}, {"id": "2-1-14a", "sc": "2-1", "cam": "바스트샷 · 아이레벨 · 고정", "note": "말없이 에이바를 보던 루카스가 라이언의 말에 살짝 당황하며 시선을 라이언 쪽으로 옮겨 대답한다. 라이언 대사는 화면 밖. 리뷰 요청으로 기존 2-1-14를 나눔", "tag": "주인 관객 특권 · 모름 라이언 · 시선 씨앗", "lines": "라이언 O.S.: 전무님이 여긴 어쩐 일이십니까?\n루카스: (살짝 당황하며 시선을 라이언에게, 눈을 한번 깜빡이며) 선물을 가져왔습니다.", "v": 1}, {"id": "2-1-14b", "sc": "2-1", "cam": "미디엄 클로즈업 · 리버스 · 라이언 옆모습(루카스와 마주 보는 각) · 고정", "note": "루카스를 마주 보는 라이언의 옆모습, 뒤로 에이바가 살짝 보인다", "tag": "주인 관객 · 모름 라이언", "lines": "라이언: 아버지 심. 부. 름. 말이죠?", "v": 1}, {"id": "2-1-15", "sc": "2-1", "cam": "와이드(광각) · 인물보다 살짝 높은 곳에서 45° 부감 · 라이언 뒤(실내)에서 루카스 쪽으로 · 고정", "note": "전경 라이언은 뒷통수와 등만 — 문턱 밖 루카스와 정면으로 마주 본다. 라이언 어깨 뒤로 반쯤 가린 에이바. 세 사람의 긴장 삼각형", "tag": "주인 관객 · 모름 —", "lines": "루카스: ….. 그만 가보겠습니다.\n라이언 O.S.: (기다렸다는 듯) 그러시죠", "v": 3}, {"id": "2-1-16", "sc": "2-1", "cam": "풀샷 · 집 앞길에서 현관 쪽 · 고정", "note": "문간에 선 라이언과 그 뒤에서 상자를 들고 손 흔드는 에이바 / 목례하고 돌아서서 카메라 쪽으로 걸어오는 루카스. 리뷰 요청 반영", "tag": "주인 관객 · 모름 에이바", "lines": "에이바: (라이언의 등 뒤에서, 선물을 들고) 전무님 감사해요! 조심히 가세요!", "v": 2}, {"id": "2-1-17", "sc": "2-1", "cam": "미디엄 · 집 밖(현관 앞)에서 문 쪽 · 180° 리버스 · 고정", "note": "현관 문틀에 옆으로 기대 팔짱 낀 라이언이 집 밖(카메라 너머)을 보며 중얼거린다. 루카스는 화면에 없음. 대사 뒤 문을 쾅 닫는다", "tag": "주인 관객 · 모름 라이언", "lines": "▷ 현관 문에 옆으로 기대 팔짱을 끼고 멀어지는 루카스를 보는 라이언\n라이언: (중얼거리며) 하. 아버지는 저런 놈을 왜.\nSFX 쾅 — 문을 닫는다", "v": 3}, {"id": "2-1-18a", "sc": "2-1", "cam": "바스트샷 · 소파 정면 · 고정", "note": "고정 카메라. 라이언이 와서 앉기 전까지는 빈 소파 → 털썩 앉으면 바스트샷. 리뷰 요청으로 기존 2-1-18을 나눔", "tag": "주인 감시 · 모름 에이바", "lines": "▷ 빈 쇼파. 라이언이 와서 털썩 주저앉아 어딘가로 메시지를 보낸다", "v": 1}, {"id": "2-1-18b", "sc": "2-1", "cam": "45° 앙각 · 고정", "note": "큰 선물을 양손으로 앞에 든 에이바가 라이언을 내려다보며 한숨 쉬고 돌아서 간다", "tag": "주인 관객 · 모름 에이바", "lines": "▷ 선물을 들고 라이언을 보고 한 번 한숨을 쉰 뒤 거실을 뜨는 에이바", "v": 2}, {"id": "2-2-1a", "sc": "2-2", "cam": "인서트 · 클로즈업 · 얕은 심도 · 고정", "note": "귀엽고 예쁜 아기 용품 클로즈업. 클로에 대사만 먼저 들린다. 리뷰 추가 컷", "tag": "주인 관객 · 모름 —", "lines": "클로에 O.S.: (물건을 고르며) 이해하세요.", "v": 1}, {"id": "2-2-1b", "sc": "2-2", "cam": "웨이스트샷 · 클로에 옆모습 · 85mm · 고정", "note": "물건을 고르는 클로에 옆모습. 라이언은 화면 가장자리에 흐린 형체로만 걸친다. 리뷰 추가 컷", "tag": "주인 관객 특권 · 모름 라이언", "lines": "클로에: (슬쩍 라이언을 보고 웃고 다시 물건에 시선) 에이바가 아직 좀 철이 없어요.", "v": 1}, {"id": "2-2-2a", "sc": "2-2", "cam": "오버더숄더 · 클로에(측면) 너머 라이언 · 고정", "note": "물건을 고르느라 옆모습인 클로에 너머로, 어른스럽고 다정하게 말하는 라이언. 리뷰 요청으로 기존 2-2-2를 나눔", "tag": "주인 관객 특권 · 모름 라이언", "lines": "라이언: (어른스럽고 다정한 남자 모드) 제가 이해 해야죠. 한창 호르몬 영향을 받을 때니까요.", "v": 1}, {"id": "2-2-2b", "sc": "2-2", "cam": "오버더숄더 · 라이언 쪽에서 클로에 · 고정", "note": "물건을 고르다 고개를 돌려 살짝 올려다보며 말하는 클로에", "tag": "주인 관객 특권 · 모름 라이언", "lines": "클로에: (은근한 눈빛) 다정하시네요.", "v": 1}, {"id": "2-2-3", "sc": "2-2", "cam": "미디엄 클로즈업 · 약간 하이 · 고정", "note": "정말 킹받는 잘생긴 미소", "tag": "주인 관객 · 모름 라이언", "lines": "라이언: (정말 킹받는 잘생긴 미소) 사랑하는 아내를 위해 제가 양보 하는 거죠.", "v": 1}, {"id": "2-2-4", "sc": "2-2", "cam": "미디엄 클로즈업 · 클로에 앞에서 앙각 · 고정", "note": "아기 신발 한 짝을 자기 손바닥에 올려 뜯어보는 클로에 — 3-1-1의 두 쌍의 신발로 회수. 리뷰 요청 반영", "tag": "주인 관객 특권 · 모름 라이언 · 증거 인서트(신발)", "lines": "클로에: (아기 신발 한 짝을 손에 들고 자세히 뜯어보며) 우리 에이바가 복 받았네요", "v": 2}, {"id": "2-2-5", "sc": "2-2", "cam": "풀샷 · 클로에 등 뒤 · 느린 푸시인", "note": "선반 쪽을 향해 신발을 든 클로에의 뒷모습 / 클로에 쪽으로 몸을 향한 라이언. 라이언 대사에 클로에가 고개를 돌려 대답한다. 리뷰 요청 반영", "tag": "주인 관객 특권 · 모름 라이언", "lines": "라이언: 아참, 클로에씨, 저랑 대학교 동문이라면서요?\n클로에: (아리송한 표정으로, 하지만 은은하게 웃으며) 에이바한테 들으셨어요?", "v": 2}, {"id": "2-2-6", "sc": "2-2", "cam": "미디엄 클로즈업 · 약간 하이 · 고정", "note": "손짓까지 곁들인 능청스러운 웃음", "tag": "주인 관객 · 모름 라이언", "lines": "라이언: 이런 미인을 왜 학교 다닐 때 못 봤을까요. 하하하", "v": 1}, {"id": "2-2-7", "sc": "2-2", "cam": "바스트샷(타이트) · 라이언 쪽 · 사이드 레일 이동 → 디졸브", "note": "몸은 진열대를 향한 채 고개만 돌려 무해하게 웃는 클로에 + 속마음 나레이션. 이 얼굴에서 2-3-2(대학 시절 뿔테 클로에)로 디졸브되며 과거로 넘어간다", "tag": "주인 클로에 · 모름 라이언 · 앞얼굴 → 2-3-5 매치", "lines": "▷ 눈을 깜빡깜빡이며 무해하게 웃고 있는 클로에\n클로에 N: 여러 번 보셨어요, 라이언 왕자님.", "v": 3}, {"id": "2-3-2", "sc": "2-3", "cam": "미디엄 · 건물 모서리 전경 가림 · 망원 · 고정", "note": "2-2-7 클로에 얼굴에서 디졸브로 들어오는 회상 첫 컷. 벽돌 모서리가 화면 왼쪽을 덮는다. 뿔테 안경, 전공책을 꼭 안은 대학생 클로에", "tag": "주인 엿보기 · 모름 라이언 · R-A 전경 가림", "lines": "▷ 검은 뿔테 안경을 쓰고, 전공책을 안은 채 건물 뒤편에서 라이언을 훔쳐 보는 클로에", "v": 1}, {"id": "2-3-1", "sc": "2-3", "cam": "풀샷 · 아이레벨 · 역광 플레어 · 원테이크(망원 엿보기)", "note": "클로에 시점 한 번에: 2000년대 아이비리그 룩의 라이언이 친구 셋과 웃고 떠들다 → 금발 미녀가 다가오면 벌떡 일어나 어깨를 안고 머리에 뽀뽀 → 친구들에게 손 흔들며 그녀와 함께 멀어진다(기존 2-3-3·2-3-4를 이 컷에 합침). 하이틴 로맨스 룩", "tag": "주인 클로에 시점 · 모름 라이언 · 하이틴 룩", "lines": "▷ 벤치에서 친구 셋과 웃고 떠드는 라이언(스케이트보드). 금발의 미소녀가 다가오자 벌떡 일어나 그녀의 어깨를 안고 머리에 뽀뽀. 친구들에게 손을 흔들며 다정하게 사라지는 그들", "v": 2}, {"id": "2-3-5", "sc": "2-3", "cam": "클로즈업 · 정면 아이레벨 · 85mm · 느린 드레드 푸시인", "note": "독기 품은 젊은 클로에의 '뒷얼굴'. 1화 1-10과 같은 프레이밍", "tag": "주인 클로에 · 모름 라이언 · 2화 화폐 · 가면 비트", "lines": "클로에 N: (독기 품은 표정) 또 다른 여자야? 몇 명이고 만나 봐. 결국 당신은 내 남자가 될 거야.", "v": 1}, {"id": "3-1-1", "sc": "3-1", "cam": "인서트 · 위에서 비스듬히 · 고정", "note": "계산대 위 핑크 한 벌·블루 한 벌, 신발 두 쌍 — 2-2-4 회수. 점원의 말은 화면 밖", "tag": "주인 관객 특권 · 모름 라이언 · 증거 회수", "lines": "▷ 색이 다른 아기 옷 두 벌. 두 쌍의 신발\n점원 O.S.: (방정맞고, 푼수같이) 어머, 축하드려요. 쌍둥이??", "v": 1}, {"id": "3-1-2", "sc": "3-1", "cam": "미디엄 클로즈업 · 계산대 너머 · 고정", "note": "우연히 진실을 짚어버린 유일한 제3자", "tag": "주인 관객 · 모름 점원", "lines": "▷ 방정맞게 축하하는 점원", "v": 1}, {"id": "3-1-3", "sc": "3-1", "cam": "오버더숄더 · 점원 쪽 · 라이언 웨이스트샷 · 고정", "note": "점원 어깨 너머 라이언, 그 뒤에 클로에. 라이언이 난처해하자 클로에가 앞으로 나서며 카드를 내민다. 리뷰 요청 반영", "tag": "주인 점원 시점 · 모름 라이언", "lines": "라이언: (살짝 놀라며) 네?\n라이언: (이내 웃기다는 듯) 아뇨, 이건-\n클로에: (앞으로 나서며 카드를 내민다) 따로 포장해주세요.", "v": 2}, {"id": "3-1-4", "sc": "3-1", "cam": "웨이스트샷 · 라이언·클로에 뒤에서 점원 쪽 · 느린 푸시인 → 손", "note": "라이언과 클로에 뒤에서 점원이 보이는 방향. 대사 동안 카드를 쥔 클로에의 손을 잡은 라이언의 손으로 천천히 들어가고, 대사가 끝나면 2초 멈춤. 1화 1-5(라이언이 클로에의 손을 잡음)의 반복. 리뷰 요청 반영", "tag": "주인 관객 특권 · 모름 라이언 · 손 인서트 ⑤ · 1-5 수미상관", "lines": "라이언: (황망히 클로에의 카드 쥔 손을 슬쩍 잡아 내리며) 아휴, 시간 내주셨는데, 제가 내야죠.\n클로에 O.S.: (카드를 다시 집어 넣으며 싱긋 웃는다) 그럼 제가 커피 살게요.", "v": 2}, {"id": "3-1-5", "sc": "3-1", "cam": "앙각 광각 · 문 쪽에서 · 고정", "note": "계산대는 화면 오른쪽. 몸은 화면 왼쪽을 향한 채 고개를 돌려 카메라 위·뒤쪽 문으로 나가는 둘을 수상하게 바라보는 점원. 리뷰 요청 반영", "tag": "주인 점원 시점 · 모름 라이언·클로에 · R-A", "lines": "▷ 둘을 약간 수상하게 바라보는 점원. 둘이 화기애애하게 웃으며 가게를 나온다", "v": 2}, {"id": "3-1-6", "sc": "3-1", "cam": "와이드 · 길 건너 망원 · 주차된 차 전경 · 고정", "note": "누가 봐도 신혼부부. 전경의 검은 차 — 누군가 보고 있다(3-1-11에서 리빌)", "tag": "주인 엿보기 · 모름 라이언·클로에 · 3-1-11 전조", "lines": "▷ 누가 봐도 행복한 신혼부부의 모습", "v": 1}, {"id": "3-1-7", "sc": "3-1", "cam": "미디엄 투샷 · 걸으며 트래킹", "note": "라이언 좌 · 클로에 우, 쇼핑백. '급하게 연락 드린 건데' = 2-1-7 폰 회수", "tag": "주인 관객 특권 · 모름 라이언 · 2-1-7 회수", "lines": "클로에: 빨리 에이바에게 가보셔야 되는 거 아니에요?\n라이언: 괜찮아요. 에이바도 진정할 시간이 필요하겠죠.\n클로에: (선물 봉투를 슬쩍 바라보며) 저랑 세트라고 하면 좋아할거에요.\n라이언: 오늘 진짜 고마워요. 급하게 연락 드린 건데.", "v": 1}, {"id": "3-1-8", "sc": "3-1", "cam": "클로즈업 · 아이레벨 · 고정", "note": "라이언(화면 밖 왼쪽)의 눈을 지그시", "tag": "주인 관객 특권 · 모름 라이언 · 앞얼굴", "lines": "클로에: (라이언의 눈을 지그시 바라본다) 언제든요.", "v": 1}, {"id": "3-1-9", "sc": "3-1", "cam": "클로즈업 · 약간 하이 · 고정", "note": "한쪽 입꼬리만 올린 은근한 미소", "tag": "주인 관객 · 모름 라이언", "lines": "라이언: (은근하고 치명적이게) 언제든요?", "v": 1}, {"id": "3-1-10", "sc": "3-1", "cam": "클로즈업 · 아이레벨 · 고정", "note": "눈을 천천히 들어 올려다본다", "tag": "주인 관객 특권 · 모름 라이언", "lines": "클로에: (눈을 천천히 뜨며 올려다본다) 네, 언제든요.", "v": 1}, {"id": "3-1-11", "sc": "3-1", "cam": "차 안 · 운전석 어깨 너머 · 앞유리 프레임 · 고정", "note": "전경 짙은 실루엣의 루카스 / 앞유리 너머 길 건너에 작게 붙어 선 두 사람. 1화의 '관찰자' 자리가 클로에에게서 루카스로 넘어가는 컷", "tag": "주인 루카스 시점 · 모름 라이언·클로에 · 3화 화폐 · R-B+R-D", "lines": "▷ 맞은 편의 차 안에서 인상을 쓴 채 그 둘을 지켜보고 있는 루카스", "v": 1}, {"id": "3-1-11b", "sc": "3-1", "cam": "미디엄 · 차 앞에서 앞유리 너머 · 고정", "note": "차 앞쪽에서 본 루카스 — 앞유리에 거리 반사가 흐르고, 인상을 쓴 채 길 건너 둘을 지켜본다. 리뷰 추가 컷", "tag": "주인 관객 · 모름 라이언·클로에 · R-B 앞유리", "lines": "▷ 인상을 쓴 채 그 둘을 지켜보는 루카스", "v": 1}, {"id": "3-1-12", "sc": "3-1", "cam": "클로즈업 · 옆얼굴 · 고정", "note": "인상을 쓴 채 전화를 받는다", "tag": "주인 관객 · 모름 —", "lines": "▷ 전화가 온다\n루카스: 네 회장님. 지금 가겠습니다.", "v": 1}, {"id": "3-1-13", "sc": "3-1", "cam": "미디엄 · 차 안 · 고정", "note": "조수석 헤드레스트에 팔을 올리고 뒤를 보며 멋지게 후진", "tag": "주인 관객 · 모름 —", "lines": "▷ 멋지게 후진(팔 올리고 뒤 보면서)해서 차를 뺀다", "v": 1}, {"id": "3-2-1", "sc": "3-2", "cam": "와이드 · 45° 부감 · 느린 크레인 다운", "note": "노을 스위트를 위에서 내려다보는 와이드. 소파에 느긋하게 앉은 하와이안 셔츠 찰스, 걸어 들어오는 루카스. 카메라가 크레인처럼 천천히 조금 내려온다. 리뷰 요청 반영", "tag": "주인 감시 · 모름 가족 전원 · 비밀: 찰스의 몰래 귀국", "lines": "▷ 호텔 룸. 하와이안 셔츠를 입은 찰스 회장", "v": 2}, {"id": "3-2-2", "sc": "3-2", "cam": "미디엄 클로즈업 · 아이레벨 · 고정", "note": "오른쪽 1/3 비움 → 찰스 소개 자막. 권력자지만 위협이 아니라 느긋하고 장난스럽게", "tag": "주인 관객 · 모름 — · 소개 자막", "lines": "찰스: 내가 귀국한 거 아무도 모르지?", "v": 1}, {"id": "3-2-3", "sc": "3-2", "cam": "미디엄 · 역광 · 고정", "note": "노을을 등져 얼굴이 빛에 반쯤 지워진 루카스(R6)", "tag": "주인 관객 · 모름 — · R-I 빛에 가린 얼굴", "lines": "루카스: 아무도 모르게 조치했습니다.", "v": 1}, {"id": "3-2-4", "sc": "3-2", "cam": "오버더숄더(루카스 → 찰스) · 고정", "note": "질문·대답 핑퐁. 영상에서 리버스 컷 몇 개로 나눌지는 편집 리듬으로", "tag": "주인 관객 · 모름 — · 리버스 핑퐁", "lines": "찰스: (확인하듯) 회사는?\n루카스: 아무 문제 없습니다.\n찰스: (건조하게) 빅토리아는?\n루카스: 여전하십니다.", "v": 1}, {"id": "3-2-5", "sc": "3-2", "cam": "미디엄 클로즈업 · 아이레벨 · 고정", "note": "에이바 이야기에만 얼굴이 부드러워진다", "tag": "주인 관객 · 모름 찰스", "lines": "찰스: (부드럽게 웃으며) 에이바는?", "v": 1}, {"id": "3-2-6", "sc": "3-2", "cam": "클로즈업 · 역광 · 고정", "note": "대답 대신 미간을 굳히고 고개를 숙인다", "tag": "주인 관객 특권 · 모름 찰스", "lines": "루카스: … (대답 대신 미간을 굳히며 살짝 고개를 숙인다)", "v": 1}, {"id": "3-2-7a", "sc": "3-2", "cam": "헤드숏 · 찰스 · 고정", "note": "한숨 쉬는 찰스 헤드숏. 리뷰 요청으로 기존 대칭 투샷을 나눔", "tag": "주인 관객 특권 · 모름 찰스", "lines": "찰스: (한숨을 쉬며) 라이언 때문인가?", "v": 1}, {"id": "3-2-7b", "sc": "3-2", "cam": "헤드숏 · 루카스 옆모습 · 역광 · 고정", "note": "덩달아 한숨 쉬는 루카스, 노을 역광", "tag": "주인 관객 특권 · 모름 찰스", "lines": "루카스: … (덩달아 한숨을 쉰다)", "v": 1}, {"id": "3-2-8", "sc": "3-2", "cam": "미디엄 클로즈업 · 아이레벨 · 고정", "note": "몸을 앞으로 당기며 다급하게, 답답해서 손짓", "tag": "주인 관객 · 모름 찰스", "lines": "찰스: 라이언 그놈 설마,\n찰스: (다급) 또 사고쳤어?\n루카스 O.S.: … 아닙니다\n찰스: 아 말 좀 해.. 재미없게 왜 가만 있냐", "v": 1}, {"id": "3-2-9a", "sc": "3-2", "cam": "미디엄 클로즈업 · 역광 · 고정", "note": "말하기 싫은 얼굴의 루카스", "tag": "주인 관객 특권 · 모름 찰스", "lines": "루카스: (말하기도 싫다는 듯) 새로운 여자가 나타났습니다.", "v": 1}, {"id": "3-2-9b", "sc": "3-2", "cam": "오버더숄더 · 루카스 쪽에서 찰스 · 고정", "note": "루카스 어깨 너머로 질렸다는 듯 손을 드는 찰스. 리뷰 추가 컷", "tag": "주인 관객 · 모름 찰스", "lines": "찰스: 와- 그 놈 징하네. 진짜 발가벗겨서 쫓아내야 하나.", "v": 1}, {"id": "3-2-10", "sc": "3-2", "cam": "클로즈업 · 정면 아이레벨 · 고정", "note": "역광이 풀리고 루카스의 얼굴이 처음으로 정면으로 드러난다(R6 예외)", "tag": "주인 관객 · 모름 찰스 · 폭로", "lines": "루카스: 이번엔 좀 심각합니다.\n찰스 O.S.: 왜?\n루카스: 에이바와.. 가장 친한 친구입니다.", "v": 1}, {"id": "3-2-11", "sc": "3-2", "cam": "클로즈업 · 아이레벨 · 고정", "note": "놀란 찰스의 표정으로 끝. 엔딩 효과는 후반에서", "tag": "주인 관객 · 모름 — · 3화 엔딩", "lines": "▷ 놀란 찰스 회장의 표정", "v": 1}]};
+// status lifecycle: todo → (draft: typed, not sent) → requested → working (Claude) → done (Claude) → ok / requested again
+const ST = {
+  todo:      { t: '미검토',   c: 'var(--st-todo)' },
+  ok:        { t: '통과',     c: 'var(--st-ok)' },
+  draft:     { t: '작성 중',  c: 'var(--st-draft)' },
+  requested: { t: '요청됨',   c: 'var(--st-requested)' },
+  working:   { t: '반영 중',  c: 'var(--st-working)' },
+  done:      { t: '반영됨',   c: 'var(--st-done)' },
+};
+const LEGACY = { fix: 'draft', redraw: 'draft' };
+const ORDER = ['todo', 'draft', 'requested', 'working', 'done', 'ok'];
+const stKey = k => LEGACY[k] || (ST[k] ? k : 'todo');
+const stOf = k => ST[stKey(k)];
+const FIELDS = ['cam', 'note', 'tag', 'lines'];
+const CUTS = DATA.cuts;
+const DEF = Object.fromEntries(CUTS.map(c => [c.id, c]));
+const $ = id => document.getElementById(id);
+
+let state = {};             // id -> server doc (merged with my pending edits)
+let cur = 0;
+let db = null, col = null, metaCol = null;
+let agent = null;           // meta/agent doc
+let showOld = false;
+const timers = {}, pending = {}, chains = {};
+
+function val(id, f) {
+  const s = state[id];
+  if (s && typeof s[f] === 'string') return s[f];
+  if (f === 'status') return 'todo';
+  if (f === 'memo' || f === 'reply' || f === 'img' || f === 'prevImg') return '';
+  return DEF[id][f];
+}
+const status = id => stKey(val(id, 'status'));
+function changed(id, f) { return FIELDS.includes(f) && val(id, f) !== DEF[id][f]; }
+function hasEdits(id) { return !!val(id, 'memo').trim() || FIELDS.some(f => changed(id, f)); }
+function imgSrc(c) { return val(c.id, 'img') || ('p/' + c.id + '.jpg?v=' + (c.v || 1)); }
+const PLACEHOLDER = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900"><rect width="1600" height="900" fill="#eee9df"/><path d="M80 70H1520V830H80Z" fill="none" stroke="#bcb6ac" stroke-width="2" stroke-dasharray="12 12"/><text x="800" y="425" fill="#857d73" font-size="46" font-family="sans-serif" text-anchor="middle">스토리보드 이미지 준비 중</text><text x="800" y="485" fill="#857d73" font-size="25" font-family="sans-serif" text-anchor="middle">p/컷ID.jpg 파일 추가 시 자동 표시됩니다</text></svg>');
+function imageFallback(img) { if (!img.src.startsWith('data:')) img.src = PLACEHOLDER; }
+document.addEventListener('error', e => { if (e.target instanceof HTMLImageElement) imageFallback(e.target); }, true);
+function esc(s) { return String(s).replace(/[&<>"]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m])); }
+function ago(iso) {
+  const t = Date.parse(iso); if (!t) return '';
+  const m = Math.round((Date.now() - t) / 60000);
+  return m < 1 ? '방금' : m < 60 ? m + '분 전' : Math.round(m / 60) + '시간 전';
+}
+function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => el.classList.remove('show'), 2200); }
+
+// ---------- persistence: field-level patches, so Claude's fields (img, reply, status) are never overwritten ----------
+const LSKEY = 'sbreview-' + (DATA.key || 'board');
+function loadLocal() { try { return JSON.parse(localStorage.getItem(LSKEY) || '{}'); } catch (e) { return {}; } }
+function saveLocal() { try { localStorage.setItem(LSKEY, JSON.stringify(state)); } catch (e) {} }
+function setSave(t, err) { const el = $('save'); el.textContent = t; el.classList.toggle('err', !!err); }
+
+function flush(id) {
+  clearTimeout(timers[id]); delete timers[id];
+  const patch = pending[id]; delete pending[id];
+  if (!patch) return Promise.resolve();
+  if (!col) { saveLocal(); setSave('이 브라우저에만 저장됨'); return Promise.resolve(); }
+  setSave('저장 중…');
+  const ref = col.doc(id);
+  chains[id] = (chains[id] || Promise.resolve())
+    .then(() => ref.update(patch).catch(() => ref.set(Object.assign({}, state[id] || {}, patch))))
+    .then(() => setSave('저장됨'))
+    .catch(e => { setSave('저장 실패 (' + (e && e.code || '알 수 없음') + ') — 수정 목록 복사로 보내 주세요', true); saveLocal(); });
+  return chains[id];
+}
+function edit(id, patch, now) {
+  patch = Object.assign({}, patch, { updatedAt: new Date().toISOString() });
+  state[id] = Object.assign({}, state[id] || {}, patch);
+  pending[id] = Object.assign(pending[id] || {}, patch);
+  clearTimeout(timers[id]);
+  if (now) return flush(id);
+  timers[id] = setTimeout(() => flush(id), 600);
+  return Promise.resolve();
+}
+
+// ---------- rendering ----------
+function renderHeader() {
+  $('title').textContent = DATA.title || '보드 리뷰';
+  document.title = DATA.title || '보드 리뷰';
+  $('chips').innerHTML = (DATA.chips || []).map(([k, v]) => `<span class="chip">${esc(k)} <b>${esc(v)}</b></span>`).join(' ');
+  const L = DATA.fieldLabels || {};
+  document.querySelectorAll('[data-label]').forEach(el => { if (L[el.dataset.label]) el.textContent = L[el.dataset.label]; });
+}
+function renderCounts() {
+  const n = {}; ORDER.forEach(k => n[k] = 0);
+  CUTS.forEach(c => n[status(c.id)]++);
+  $('counts').innerHTML = ORDER.filter(k => n[k] || k === 'todo' || k === 'ok').map(k =>
+    `<span class="chip"><span class="dot" style="background:${ST[k].c}"></span>${ST[k].t} <b>${n[k]}</b></span>`).join('');
+}
+function renderAgent() {
+  const el = $('agent'), t = $('agentTxt');
+  el.className = 'agent';
+  if (!col) { t.textContent = '공유 저장소 연결 전 · 이 기기에 임시 저장'; return; }
+  const busy = CUTS.some(c => status(c.id) === 'working');
+  if (!agent || agent.mode !== 'on') { t.textContent = 'AI 자동 반영 연결 전'; return; }
+  const age = (Date.now() - Date.parse(agent.lastCheck || 0)) / 60000;
+  const every = agent.everyMin || 2;
+  if (age > every * 3 + 2) { el.classList.add('stale'); t.textContent = `AI 확인 지연 (${ago(agent.lastCheck)})`; return; }
+  el.classList.add(busy ? 'busy' : 'on');
+  t.textContent = busy ? 'AI 반영 중…' : `AI 연결됨 · ${ago(agent.lastCheck)} 확인 · ${every}분마다`;
+}
+function renderRail() {
+  let html = '', sc = null;
+  CUTS.forEach((c, i) => {
+    if (c.sc !== sc) { sc = c.sc; html += `<h2>${esc(DATA.scenes[sc] || '')}</h2>`; }
+    const s = stOf(val(c.id, 'status'));
+    html += `<button class="thumb${i === cur ? ' on' : ''}" type="button" data-i="${i}" aria-label="${c.id} ${s.t}">
+      <span class="stripe" style="background:${s.c}"></span>
+      <span class="body"><img src="${esc(imgSrc(c))}" alt="" loading="lazy"><span class="meta"><b>${c.id}</b><span>${s.t}</span></span></span></button>`;
+  });
+  $('rail').innerHTML = html;
+  const on = $('rail').querySelector('.on'); if (on) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+}
+function parseLine(l) {
+  l = l.trim(); if (!l) return null;
+  if (l.startsWith('▷')) return { k: 'act', t: l.slice(1).trim() };
+  if (/^SFX\s/i.test(l)) return { k: 'sfx', t: l.slice(3).trim() };
+  const m = l.match(/^([^:：]{1,20})[:：]\s*(?:\(([^)]*)\)\s*)?(.*)$/);
+  if (!m) return { k: 'act', t: l };
+  const spk = m[1].trim();
+  return { k: / N$/.test(spk) ? 'n' : 'say', spk, par: m[2] || '', t: m[3] };
+}
+function renderPreview() {
+  const c = CUTS[cur];
+  const lines = val(c.id, 'lines').split('\n').map(parseLine).filter(Boolean);
+  const camL = (DATA.fieldLabels && DATA.fieldLabels.cam) || '카메라';
+  let h = `<div class="cam">${esc(camL)} · ${esc(val(c.id, 'cam'))}${val(c.id, 'note') ? ' — ' + esc(val(c.id, 'note')) : ''}</div>`;
+  lines.forEach(L => {
+    if (L.k === 'act') h += `<div class="act">▷ ${esc(L.t)}</div>`;
+    else if (L.k === 'sfx') h += `<div class="act">SFX ${esc(L.t)}</div>`;
+    else h += `<div class="ln ${L.k}"><span class="spk">${esc(L.spk)}</span><span>${L.par ? `<span class="par">(${esc(L.par)})</span> ` : ''}${esc(L.t)}</span></div>`;
+  });
+  $('preview').innerHTML = h;
+}
+function renderSheet() {
+  const c = CUTS[cur], id = c.id, k = status(id), s = ST[k];
+  FIELDS.forEach(f => {
+    $('f-' + f).classList.toggle('changed', changed(id, f));
+    document.querySelector(`[data-orig="${f}"]`).textContent = DEF[id][f] || '(비어 있음)';
+  });
+  const b = $('stbadge'); b.className = 'stbadge ' + k;
+  b.querySelector('.dot').style.background = s.c; b.lastElementChild.textContent = s.t; b.style.color = s.c;
+  $('seg').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x.dataset.k === k));
+  const edits = hasEdits(id);
+  const send = $('btnSend'), cancel = $('btnCancel'), hint = $('sendHint');
+  cancel.hidden = k !== 'requested';
+  if (k === 'requested') { send.disabled = true; send.textContent = '요청 기록됨 · AI 연결 대기'; }
+  else if (k === 'working') { send.disabled = true; send.textContent = 'AI가 반영하는 중…'; }
+  else { send.disabled = !edits; send.textContent = k === 'done' ? '다시 요청 보내기 → 다음 컷' : '수정 요청 보내기 → 다음 컷'; }
+  hint.hidden = k === 'requested' || k === 'working';
+  hint.textContent = edits ? '수정 요청과 고친 대사·카메라가 함께 보내져요. 보내 두고 다음 컷을 보시면 됩니다.'
+                           : '수정 요청을 적거나 대사·카메라를 고치면 보낼 수 있어요.';
+  const reply = val(id, 'reply'), r = $('reply');
+  r.hidden = !(reply || k === 'requested' || k === 'working');
+  r.className = 'reply ' + (k === 'working' ? 'working' : k === 'requested' ? 'requested' : 'done');
+  r.textContent = k === 'requested' ? '요청 기록됨 · ' + ago(val(id, 'requestedAt')) + (reply ? '\n지난 반영: ' + reply : '')
+                : k === 'working' ? 'AI: ' + (reply || '반영 중…')
+                : 'AI: ' + reply + (val(id, 'doneAt') ? '  (' + ago(val(id, 'doneAt')) + ')' : '');
+  $('btnOld').hidden = !val(id, 'prevImg');
+}
+function renderForm(force) {
+  const c = CUTS[cur];
+  const map = { 'in-cam': 'cam', 'in-note': 'note', 'in-tag': 'tag', 'in-lines': 'lines', 'in-memo': 'memo' };
+  Object.entries(map).forEach(([el, f]) => {
+    const node = $(el);
+    if (force || document.activeElement !== node) node.value = val(c.id, f);
+  });
+  renderSheet();
+}
+function renderStage() {
+  const c = CUTS[cur];
+  $('cutid').textContent = c.id;
+  $('scene').textContent = (DATA.scenes[c.sc] || '') + ` · ${cur + 1} / ${CUTS.length}`;
+  const src = showOld && val(c.id, 'prevImg') ? val(c.id, 'prevImg') : imgSrc(c);
+  if ($('img').getAttribute('src') !== src) $('img').src = src;
+  $('frame').classList.toggle('old', showOld && !!val(c.id, 'prevImg'));
+  $('img').alt = c.id + ' 보드 그림';
+  renderPreview();
+}
+function renderGrid() {
+  let html = '', sc = null;
+  CUTS.forEach((c, i) => {
+    if (c.sc !== sc) { if (sc !== null) html += '</div></section>'; sc = c.sc; html += `<section><h2>${esc(DATA.scenes[sc] || '')}</h2><div class="cards">`; }
+    const s = stOf(val(c.id, 'status'));
+    const first = val(c.id, 'lines').split('\n')[0] || '';
+    const memo = val(c.id, 'memo');
+    html += `<button class="card" type="button" data-i="${i}"><img src="${esc(imgSrc(c))}" alt="" loading="lazy">
+      <span class="cbody" style="border-top-color:${s.c}"><span class="top"><b>${c.id}</b><span class="chip"><span class="dot" style="background:${s.c}"></span>${s.t}</span></span>
+      <span class="txt">${esc(first)}</span>${memo ? `<span class="memo-p">요청: ${esc(memo)}</span>` : ''}</span></button>`;
+  });
+  html += '</div></section>';
+  $('grid').innerHTML = html;
+}
+function renderAll(force) { renderCounts(); renderAgent(); renderRail(); renderStage(); renderForm(force); if ($('app').classList.contains('gridmode')) renderGrid(); }
+function go(i) { cur = (i + CUTS.length) % CUTS.length; showOld = false; renderAll(true); }
+function updateRailItem(id) {
+  const i = CUTS.findIndex(c => c.id === id), t = $('rail').querySelector(`[data-i="${i}"]`); if (!t) return;
+  const s = stOf(val(id, 'status')); t.querySelector('.stripe').style.background = s.c; t.querySelector('.meta span').textContent = s.t;
+}
+
+// ---------- events ----------
+$('seg').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const id = CUTS[cur].id, k = status(id);
+  if (k === 'requested' || k === 'working') { toast('요청 처리 중에는 바꿀 수 없어요. 먼저 요청을 취소해 주세요.'); return; }
+  edit(id, { status: b.dataset.k }); renderCounts(); updateRailItem(id); renderSheet();
+});
+[['in-cam', 'cam'], ['in-note', 'note'], ['in-tag', 'tag'], ['in-lines', 'lines'], ['in-memo', 'memo']].forEach(([el, f]) => {
+  $(el).addEventListener('input', () => {
+    const id = CUTS[cur].id, k = status(id), patch = { [f]: $(el).value };
+    if (k === 'todo' || k === 'ok' || k === 'done') patch.status = 'draft';
+    edit(id, patch);
+    if (!hasEdits(id) && status(id) === 'draft') edit(id, { status: 'todo' });
+    renderSheet(); renderCounts(); renderPreview(); updateRailItem(id);
+  });
+});
+document.querySelectorAll('[data-reset]').forEach(b => b.addEventListener('click', () => {
+  const f = b.dataset.reset, id = CUTS[cur].id;
+  edit(id, { [f]: DEF[id][f] });
+  if (!hasEdits(id) && status(id) === 'draft') edit(id, { status: 'todo' });
+  renderForm(true); renderPreview(); renderCounts(); updateRailItem(id);
+}));
+$('btnSend').addEventListener('click', async () => {
+  const id = CUTS[cur].id;
+  if (!hasEdits(id)) return;
+  const at = new Date().toISOString();
+  await edit(id, { status: 'requested', requestedAt: at }, true);
+  toast(`${id} 요청 기록됨 · 공유 DB 연결 전에는 이 브라우저에만 저장됩니다`);
+  go(cur + 1);
+});
+$('btnCancel').addEventListener('click', () => {
+  const id = CUTS[cur].id; if (status(id) !== 'requested') return;
+  edit(id, { status: 'draft' }, true); renderCounts(); updateRailItem(id); renderSheet();
+});
+const holdOld = on => { showOld = on; renderStage(); };
+$('btnOld').addEventListener('pointerdown', () => holdOld(true));
+['pointerup', 'pointerleave', 'blur'].forEach(ev => $('btnOld').addEventListener(ev, () => showOld && holdOld(false)));
+$('rail').addEventListener('click', e => { const t = e.target.closest('[data-i]'); if (t) go(+t.dataset.i); });
+$('grid').addEventListener('click', e => { const t = e.target.closest('[data-i]'); if (t) { $('app').classList.remove('gridmode'); $('btnGrid').textContent = '전체 보기'; go(+t.dataset.i); } });
+$('prev').addEventListener('click', () => go(cur - 1));
+$('next').addEventListener('click', () => go(cur + 1));
+document.addEventListener('keydown', e => {
+  const tag = (document.activeElement && document.activeElement.tagName) || '';
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || $('modal').classList.contains('open')) return;
+  if (e.key === 'ArrowLeft') { e.preventDefault(); go(cur - 1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); go(cur + 1); }
+});
+$('btnGrid').addEventListener('click', () => {
+  const on = $('app').classList.toggle('gridmode');
+  $('btnGrid').textContent = on ? '한 컷씩 보기' : '전체 보기';
+  if (on) renderGrid();
+});
+$('btnWide').addEventListener('click', () => {
+  const on = $('main').classList.toggle('wide');
+  $('btnWide').textContent = on ? '편집 열기' : '그림 크게';
+});
+const FL = { cam: '카메라', note: '연출 메모', tag: '시점 태그', lines: '대사' };
+function summary() {
+  const out = [];
+  CUTS.forEach(c => {
+    const k = status(c.id);
+    if (!['draft', 'requested'].includes(k)) return;
+    out.push(`[${c.id}] ${ST[k].t}`);
+    const memo = val(c.id, 'memo'); if (memo) out.push('  요청: ' + memo);
+    FIELDS.forEach(f => { if (changed(c.id, f)) out.push(`  ${((DATA.fieldLabels || {})[f]) || FL[f]}: ` + val(c.id, f).replace(/\n/g, ' / ')); });
+  });
+  return out.length ? out.join('\n') : '보낼 수정 사항이 없어요.';
+}
+$('btnCopy').addEventListener('click', async () => {
+  const t = summary();
+  $('mtext').value = t; $('modal').classList.add('open');
+  try { await navigator.clipboard.writeText(t); $('mhint').textContent = '복사했어요. 채팅에 붙여 넣어도 반영돼요.'; }
+  catch (e) { $('mhint').textContent = '자동 복사가 막혀 있어요. 아래 글을 선택해서 복사해 주세요.'; $('mtext').select(); }
+});
+$('mcopy').addEventListener('click', async () => { try { await navigator.clipboard.writeText($('mtext').value); $('mhint').textContent = '복사했어요.'; } catch (e) { $('mtext').select(); } });
+$('mclose').addEventListener('click', () => $('modal').classList.remove('open'));
+setInterval(() => { renderAgent(); if (['requested', 'working', 'done'].includes(status(CUTS[cur].id))) renderSheet(); }, 30000);
+
+// ---------- boot ----------
+renderHeader();
+state = loadLocal();
+renderAll(true);
+(async () => {
+  try { db = window.claude && await window.claude.use('db'); } catch (e) { db = null; }
+  if (!db) { setSave('이 브라우저에만 저장됨 — 공유 DB 설정 필요'); renderAgent(); return; }
+  col = db.collection('cuts'); metaCol = db.collection('meta');
+  state = {}; renderAll(true);
+  setSave('저장소 연결됨');
+  col.onSnapshot(snap => {
+    let touched = false, curTouched = false, curImg = false;
+    const curId = CUTS[cur].id;
+    snap.docs.forEach(d => {
+      const body = d.data(); if (!body) return;
+      const mine = pending[d.id] || {};
+      const prev = state[d.id] || {};
+      state[d.id] = Object.assign({}, body, mine);   // keep my not-yet-saved fields on top
+      touched = true;
+      if (d.id === curId) { curTouched = true; if ((prev.img || '') !== (body.img || '')) curImg = true; }
+      if (prev.status !== body.status && body.status === 'done' && prev.status) toast(`${d.id} 반영됐어요`);
+    });
+    if (!touched) return;
+    renderCounts(); renderAgent(); renderRail();
+    if (curTouched) { if (curImg) renderStage(); else renderPreview(); renderForm(false); }
+    if ($('app').classList.contains('gridmode')) renderGrid();
+  }, err => { setSave('실시간 연결 끊김 (' + (err && err.code) + ') — 새로고침해 주세요', true); });
+  metaCol.onSnapshot(snap => {
+    snap.docs.forEach(d => { if (d.id === 'agent') agent = d.data(); });
+    renderAgent();
+  }, () => {});
+})();
+</script>
+</body>
+</html>
