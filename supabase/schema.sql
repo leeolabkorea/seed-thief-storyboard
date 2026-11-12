@@ -100,3 +100,9 @@ end $$;
 -- select id, 'owner' from auth.users where email = 'director@example.com'
 -- on conflict (user_id) do update set role = excluded.role;
 -- 팀원은 'editor' 또는 'viewer' 지정
+
+-- Data API grants (RLS still enforces membership and edit privileges)
+grant usage on schema public to authenticated;
+grant select on public.board_members to authenticated;
+grant select, insert, update on public.board_cuts to authenticated;
+grant select, insert, update on public.board_meta to authenticated;
