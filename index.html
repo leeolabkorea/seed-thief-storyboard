@@ -291,12 +291,13 @@ function flush(id) {
   setSave('저장 중…');
   const ref = col.doc(id);
   chains[id] = (chains[id] || Promise.resolve())
-    .then(() => ref.update(patch).catch(() => ref.set(Object.assign({}, state[id] || {}, patch))))
+    .then(() => ref.update(patch))
     .then(() => setSave('저장됨'))
     .catch(e => { setSave('저장 실패 (' + (e && e.code || '알 수 없음') + ') — 수정 목록 복사로 보내 주세요', true); saveLocal(); });
   return chains[id];
 }
 function edit(id, patch, now) {
+  if (document.body.dataset.role === 'viewer') { toast('읽기 전용 계정입니다'); return Promise.resolve(); }
   patch = Object.assign({}, patch, { updatedAt: new Date().toISOString() });
   state[id] = Object.assign({}, state[id] || {}, patch);
   pending[id] = Object.assign(pending[id] || {}, patch);
@@ -458,7 +459,7 @@ $('btnSend').addEventListener('click', async () => {
   if (!hasEdits(id)) return;
   const at = new Date().toISOString();
   await edit(id, { status: 'requested', requestedAt: at }, true);
-  toast(`${id} 요청 기록됨 · 공유 DB 연결 전에는 이 브라우저에만 저장됩니다`);
+  toast(`${id} 수정 요청이 기록됐습니다`);
   go(cur + 1);
 });
 $('btnCancel').addEventListener('click', () => {
