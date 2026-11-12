@@ -1,6 +1,5 @@
-// Public browser configuration only. Supabase anon/publishable key is safe here ONLY with RLS enabled.
-// NEVER insert a service_role key, database password, or secret token into this file.
+// Public Supabase connection configuration. Never place secret/service_role keys here.
 window.STORYBOARD_SUPABASE = {
-  url: "",
-  anonKey: ""
+  url: "https://blencqdnczggpuufryjx.supabase.co",
+  anonKey: "sb_publishable_RdIAsHQknD43jEzigJsnMA_D-2z9VFq"
 };
