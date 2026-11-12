@@ -265,7 +265,7 @@ function val(id, f) {
 const status = id => stKey(val(id, 'status'));
 function changed(id, f) { return FIELDS.includes(f) && val(id, f) !== DEF[id][f]; }
 function hasEdits(id) { return !!val(id, 'memo').trim() || FIELDS.some(f => changed(id, f)); }
-function imgSrc(c) { return val(c.id, 'img') || ('p/' + c.id + '.jpg?v=' + (c.v || 1)); }
+function imgSrc(c) { return val(c.id, 'img') || c.img || ('p/' + c.id + '.jpg?v=' + (c.v || 1)); }
 const PLACEHOLDER = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900"><rect width="1600" height="900" fill="#eee9df"/><path d="M80 70H1520V830H80Z" fill="none" stroke="#bcb6ac" stroke-width="2" stroke-dasharray="12 12"/><text x="800" y="425" fill="#857d73" font-size="46" font-family="sans-serif" text-anchor="middle">스토리보드 이미지 준비 중</text><text x="800" y="485" fill="#857d73" font-size="25" font-family="sans-serif" text-anchor="middle">p/컷ID.jpg 파일 추가 시 자동 표시됩니다</text></svg>');
 function imageFallback(img) { if (!img.src.startsWith('data:')) img.src = PLACEHOLDER; }
 document.addEventListener('error', e => { if (e.target instanceof HTMLImageElement) imageFallback(e.target); }, true);
