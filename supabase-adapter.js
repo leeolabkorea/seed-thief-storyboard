@@ -13,7 +13,7 @@
     return data.signedUrl;
   }
   async function uploadImage(cutId, file) {
-    if (!/^4-[1-4]-\\d+$/.test(cutId)) throw new Error('허용되지 않은 컷 번호입니다.');
+    if (!/^4-[1-4]-\d+$/.test(cutId)) throw new Error('허용되지 않은 컷 번호입니다.');
     if (!['image/jpeg','image/png','image/webp'].includes(file.type)) throw new Error('JPG, PNG, WebP만 업로드할 수 있습니다.');
     if (file.size > 10 * 1024 * 1024) throw new Error('이미지는 10MB 이하여야 합니다.');
     const ext = {'image/jpeg':'jpg','image/png':'png','image/webp':'webp'}[file.type];
