@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900">
+<defs>
+ <filter id="p"><feTurbulence type="fractalNoise" baseFrequency=".012" numOctaves="3" seed="11" result="n"/><feColorMatrix in="n" type="saturate" values="0" result="mono"/><feBlend in="SourceGraphic" in2="mono" mode="multiply"/></filter>
+ <filter id="soft"><feGaussianBlur stdDeviation="5"/></filter>
+ <pattern id="grain" width="130" height="130" patternUnits="userSpaceOnUse"><path d="M1 25l15 -8m51 46l21 -17m-50 63l31 -11M110 10l18 9" stroke="#62594e" stroke-width="1.6" opacity=".18"/></pattern>
+</defs>
+<rect width="1600" height="900" fill="#eee6d7"/><rect width="1600" height="900" fill="url(#grain)"/>
+<!-- diner window, out-of-focus daylight and secondary space -->
+<g stroke="#4f4c47" fill="none" stroke-linecap="round">
+<path d="M55 75L57 704M58 79L526 77M490 76L499 581" stroke-width="17" opacity=".48"/>
+<path d="M75 340L494 333M300 76L302 590" stroke-width="7" opacity=".35"/>
+<path d="M104 281Q190 205 296 277T480 277M76 533Q203 484 311 541L483 475" stroke-width="10" opacity=".13" filter="url(#soft)"/>
+<path d="M0 732Q225 706 470 728" stroke-width="14" opacity=".28"/>
+</g>
+<!-- table and restaurant setting -->
+<g stroke="#4b4540" stroke-linejoin="round" stroke-linecap="round">
+<path d="M120 767Q750 709 1535 759L1583 801Q920 773 120 817Z" fill="#d4c8b6" stroke-width="8" opacity=".68"/>
+<path d="M170 811Q800 759 1520 799" fill="none" stroke-width="15" opacity=".27"/>
+<path d="M1290 653q80 -45 161 -4" stroke-width="11" opacity=".32" fill="none"/>
+</g>
+<!-- foreground young Ava torso and head -->
+<g stroke="#302d2a" stroke-linecap="round" stroke-linejoin="round" filter="url(#p)">
+<path d="M509 905Q527 718 635 642Q675 617 752 611L907 618Q1015 657 1081 814L1140 934" fill="#aea69a" stroke-width="19" opacity=".88"/>
+<path d="M586 878Q615 750 685 693M975 705Q1028 762 1047 871" fill="none" stroke-width="15" opacity=".66"/>
+<path d="M707 606Q665 532 667 400Q662 267 768 215Q852 166 951 250Q1048 340 999 472Q985 559 909 613" fill="#e5d9c8" stroke-width="15" opacity=".95"/>
+<path d="M680 408Q654 246 775 197Q840 166 919 205Q1017 235 1032 388Q1006 320 955 285Q904 233 836 269Q761 263 712 340Z" fill="#686158" stroke-width="10" opacity=".76"/>
+<path d="M707 311Q760 220 852 241M871 213q113 26 137 124M690 353q-10 112 21 188" fill="none" stroke-width="18" opacity=".44"/>
+<!-- arms: Ava covers face with both hands -->
+<path d="M605 837Q616 754 664 658Q679 622 712 590Q719 546 735 489L761 398Q771 377 793 396Q798 407 790 451L802 372Q810 351 829 364Q838 374 827 431L844 362Q859 344 874 356Q887 370 872 434L879 394Q899 376 912 397Q921 419 900 467L872 557Q834 610 794 661L755 813" fill="#e0d1bc" stroke-width="13"/>
+<path d="M1091 856Q1072 733 1029 650Q1013 625 970 582L953 478L944 408Q938 384 919 388Q909 395 913 432L899 358Q888 341 873 352Q861 365 879 431L859 380Q844 361 832 380Q827 396 850 453L827 430Q805 417 795 437Q791 450 806 474Q838 533 872 575L909 675L955 845" fill="#d7c7b3" stroke-width="13"/>
+<path d="M743 480l31 20M811 456l34 17M909 479l-26 33" stroke-width="6" opacity=".37" fill="none"/>
+<!-- visible cheek tears below hands -->
+<path d="M749 549Q762 593 783 608M930 549q-9 36 -28 49" fill="none" stroke-width="7" opacity=".5"/>
+<path d="M782 609q4 31 -6 50M909 597q-10 25 -9 44" fill="none" stroke-width="4" opacity=".45"/>
+</g>
+<!-- subtle blurred secondary figures behind, without competing for attention -->
+<g stroke="#534e48" stroke-linecap="round" fill="none" opacity=".31" filter="url(#soft)">
+<ellipse cx="1388" cy="449" rx="60" ry="75" stroke-width="19"/><path d="M1288 713q16 -151 102 -167q81 9 125 162" stroke-width="33"/>
+<path d="M1200 644l130 47" stroke-width="27"/>
+</g>
+<!-- dark dry charcoal hatching -->
+<g stroke="#332f2b" opacity=".16" stroke-width="4" stroke-linecap="round">
+<path d="M612 725l-68 94m90 -114l-73 130m92 -121l-67 128m345 -158l107 150m-89 -159l98 142"/>
+<path d="M734 249l-35 63m50-77l-44 68m71-84l-37 70m213-49l55 67"/>
+</g>
+</svg>
