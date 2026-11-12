@@ -44,15 +44,24 @@
     msg(error ? '로그인 링크 전송 실패: ' + error.message : '이메일을 확인해 로그인 링크를 눌러주세요.\n첫 로그인 후에는 감독이 팀원 권한을 등록해야 합니다.');
   });
 
+  // Display current authentication state rather than always showing the email form.
+  function showAuthState(state, detail) {
+    form.hidden = state === 'signed-in';
+    if (state === 'signed-in') {
+      msg(detail || '이메일 인증 완료. 팀원 권한을 확인하고 있습니다.');
+    } else if (detail) msg(detail);
+  }
+
   async function authorizedSession() {
     const { data, error } = await client.auth.getSession();
     if (error) throw error;
-    if (!data.session) return null;
+    if (!data.session) { showAuthState('signed-out', '로그인 후 이메일로 받은 링크를 이 브라우저에서 열어주세요.'); return null; }
+    showAuthState('signed-in', '이메일 인증 완료 · 팀원 권한 확인 중…');
     const { data: member, error: memberError } = await client.from('board_members')
       .select('role').eq('user_id', data.session.user.id).maybeSingle();
     if (memberError) throw memberError;
     if (!member) {
-      msg('현재 계정은 아직 팀원으로 등록되지 않았습니다.\n관리자에게 이메일 등록을 요청한 뒤 새로고침하세요.');
+      showAuthState('signed-in', '로그인은 성공했습니다. 다만 아직 팀원 권한이 등록되지 않았습니다.\n관리자에게 등록을 요청한 뒤 페이지를 새로고침하세요.');
       return null;
     }
     return member;
@@ -76,7 +85,8 @@
         } catch (e) { msg('로그인 확인 실패: ' + e.message); }
       };
       client.auth.onAuthStateChange(() => { setTimeout(check, 100); });
-      document.getElementById('sb-auth-email').addEventListener('change', check);
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
+      window.addEventListener('focus', check);
     });
   }
 
