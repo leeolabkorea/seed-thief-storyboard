@@ -163,6 +163,8 @@ header h1 { font-size: 17px; font-weight: 900; margin: 0; letter-spacing: -0.01e
         <span class="scene" id="scene"></span>
         <div class="spacer"></div>
         <button class="btn" id="btnOld" type="button" hidden>이전 그림 누르고 보기</button>
+        <button class="btn" id="btnUpload" type="button" title="현재 컷 이미지 등록">그림 업로드</button>
+        <input id="imageUpload" type="file" accept="image/jpeg,image/png,image/webp" hidden>
         <span class="hint">← → 키로 컷 이동</span>
       </div>
       <div class="frame" id="frame"><img id="img" alt=""><span class="badge">이전 그림</span></div>
@@ -256,7 +258,23 @@ function val(id, f) {
 const status = id => stKey(val(id, 'status'));
 function changed(id, f) { return FIELDS.includes(f) && val(id, f) !== DEF[id][f]; }
 function hasEdits(id) { return !!val(id, 'memo').trim() || FIELDS.some(f => changed(id, f)); }
-function imgSrc(c) { return val(c.id, 'img') || c.img || ('p/' + c.id + '.jpg?v=' + (c.v || 1)); }
+const signedImages = new Map();
+function imageLink(value) {
+  if (!value) return '';
+  if (!value.startsWith('storage:')) return value;
+  return signedImages.get(value.slice(8)) || PLACEHOLDER;
+}
+function imgSrc(c) { return imageLink(val(c.id, 'img') || c.img || ('p/' + c.id + '.jpg?v=' + (c.v || 1))); }
+async function resolveCutImage(value) {
+  if (!value || !value.startsWith('storage:') || !window.storyboardDB?.resolveImage) return;
+  const path = value.slice(8);
+  try {
+    const url = await window.storyboardDB.resolveImage(path);
+    signedImages.set(path, url);
+    renderStage(); renderRail();
+    if ($('app').classList.contains('gridmode')) renderGrid();
+  } catch (e) { setSave('이미지 접근 실패: ' + e.message, true); }
+}
 const PLACEHOLDER = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900"><rect width="1600" height="900" fill="#eee9df"/><path d="M80 70H1520V830H80Z" fill="none" stroke="#bcb6ac" stroke-width="2" stroke-dasharray="12 12"/><text x="800" y="425" fill="#857d73" font-size="46" font-family="sans-serif" text-anchor="middle">스토리보드 이미지 준비 중</text><text x="800" y="485" fill="#857d73" font-size="25" font-family="sans-serif" text-anchor="middle">p/컷ID.jpg 파일 추가 시 자동 표시됩니다</text></svg>');
 function imageFallback(img) { if (!img.src.startsWith('data:')) img.src = PLACEHOLDER; }
 document.addEventListener('error', e => { if (e.target instanceof HTMLImageElement) imageFallback(e.target); }, true);
@@ -396,7 +414,7 @@ function renderStage() {
   const c = CUTS[cur];
   $('cutid').textContent = c.id;
   $('scene').textContent = (DATA.scenes[c.sc] || '') + ` · ${cur + 1} / ${CUTS.length}`;
-  const src = showOld && val(c.id, 'prevImg') ? val(c.id, 'prevImg') : imgSrc(c);
+  const src = showOld && val(c.id, 'prevImg') ? imageLink(val(c.id, 'prevImg')) : imgSrc(c);
   if ($('img').getAttribute('src') !== src) $('img').src = src;
   $('frame').classList.toggle('old', showOld && !!val(c.id, 'prevImg'));
   $('img').alt = c.id + ' 보드 그림';
@@ -459,6 +477,28 @@ $('btnCancel').addEventListener('click', () => {
 });
 const holdOld = on => { showOld = on; renderStage(); };
 $('btnOld').addEventListener('pointerdown', () => holdOld(true));
+$('btnUpload').addEventListener('click', () => {
+  if (document.body.dataset.role === 'viewer') { toast('조회 전용 계정입니다.'); return; }
+  if (!col || !window.storyboardDB?.uploadImage) { toast('Supabase 연결 후 업로드할 수 있습니다.'); return; }
+  $('imageUpload').click();
+});
+$('imageUpload').addEventListener('change', async event => {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+  const c = CUTS[cur];
+  const btn = $('btnUpload');
+  btn.disabled = true; btn.textContent = '업로드 중…';
+  try {
+    const previous = val(c.id, 'img') || c.img || '';
+    const path = await window.storyboardDB.uploadImage(c.id, file);
+    const nextImage = 'storage:' + path;
+    await edit(c.id, {img:nextImage, prevImg:previous, updatedAt:new Date().toISOString()}, true);
+    await resolveCutImage(nextImage);
+    renderAll(true);
+    toast(c.id + ' 그림 등록 완료');
+  } catch (e) { toast('업로드 실패: ' + (e?.message || String(e))); }
+  finally { btn.disabled = false; btn.textContent = '그림 업로드'; event.target.value = ''; }
+});
 ['pointerup', 'pointerleave', 'blur'].forEach(ev => $('btnOld').addEventListener(ev, () => showOld && holdOld(false)));
 $('rail').addEventListener('click', e => { const t = e.target.closest('[data-i]'); if (t) go(+t.dataset.i); });
 $('grid').addEventListener('click', e => { const t = e.target.closest('[data-i]'); if (t) { $('app').classList.remove('gridmode'); $('btnGrid').textContent = '전체 보기'; go(+t.dataset.i); } });
@@ -519,6 +559,8 @@ renderAll(true);
       const mine = pending[d.id] || {};
       const prev = state[d.id] || {};
       state[d.id] = Object.assign({}, body, mine);   // keep my not-yet-saved fields on top
+      resolveCutImage(body.img);
+      resolveCutImage(body.prevImg);
       touched = true;
       if (d.id === curId) { curTouched = true; if ((prev.img || '') !== (body.img || '')) curImg = true; }
       if (prev.status !== body.status && body.status === 'done' && prev.status) toast(`${d.id} 반영됐어요`);
