@@ -2,7 +2,27 @@
 (function () {
   const config = window.STORYBOARD_SUPABASE || {};
   if (!config.url || !config.anonKey) {
-    window.storyboardDB = { use: async () => null };
+    const imageBucket = client.storage.from('storyboard-images');
+  const signedUrlCache = new Map();
+  async function resolveImage(storagePath) {
+    if (!storagePath) return null;
+    if (signedUrlCache.has(storagePath)) return signedUrlCache.get(storagePath);
+    const { data, error } = await imageBucket.createSignedUrl(storagePath, 3600);
+    if (error) throw error;
+    signedUrlCache.set(storagePath, data.signedUrl);
+    return data.signedUrl;
+  }
+  async function uploadImage(cutId, file) {
+    if (!/^4-[1-4]-\\d+$/.test(cutId)) throw new Error('허용되지 않은 컷 번호입니다.');
+    if (!['image/jpeg','image/png','image/webp'].includes(file.type)) throw new Error('JPG, PNG, WebP만 업로드할 수 있습니다.');
+    if (file.size > 10 * 1024 * 1024) throw new Error('이미지는 10MB 이하여야 합니다.');
+    const ext = {'image/jpeg':'jpg','image/png':'png','image/webp':'webp'}[file.type];
+    const path = 'episode-4/' + cutId + '/' + Date.now() + '-' + crypto.randomUUID() + '.' + ext;
+    const { error } = await imageBucket.upload(path, file, { contentType: file.type, upsert:false });
+    if (error) throw error;
+    return path;
+  }
+  window.storyboardDB = { use: async () => null };
     return;
   }
   if (!window.supabase || !window.supabase.createClient) {
@@ -119,6 +139,8 @@
 
   window.storyboardDB = {
     client,
+    resolveImage,
+    uploadImage,
     use: async () => {
       await waitForPermission();
       return { collection };
